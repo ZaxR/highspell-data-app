@@ -82,14 +82,49 @@ class NPCEntityDef(Base):
     pickpocket = relationship("PickpocketDef")
     loot_table = relationship("NPCLoot")
 
+    # Optional combat stats
+    combat_level = Column(Integer)
+    hitpoints = Column(Integer)
+    accuracy = Column(Integer)
+    strength = Column(Integer)
+    defense = Column(Integer)
+    magic = Column(Integer)
+    range = Column(Integer)
+    accuracy_bonus = Column(Integer)
+    strength_bonus = Column(Integer)
+    defense_bonus = Column(Integer)
+    magic_bonus = Column(Integer)
+    range_bonus = Column(Integer)
+    speed = Column(Integer)
+    aggro_radius = Column(Integer)
+    is_always_aggro = Column(Boolean)
+    respawn_length = Column(Integer)
+
     @classmethod
     def from_dict(cls, d):
+        combat = d.get('combat') or {}
         return cls(
             id=d['_id'],
             name=d['name'],
             description=d.get('description', ''),
-            pickpocket_id=d.get('pickpocketId'),
-            loot_table_id=(d.get('combat') or {}).get('lootTableId')
+            pickpocket_id=d.get('pickpocketId'),  # foreign key to pickpocketdefs
+            loot_table_id=combat.get('lootTableId'),
+            combat_level=combat.get('level'),
+            hitpoints=combat.get('hitpoints'),
+            accuracy=combat.get('accuracy'),
+            strength=combat.get('strength'),
+            defense=combat.get('defense'),
+            magic=combat.get('magic'),
+            range=combat.get('range'),
+            accuracy_bonus=combat.get('accuracyBonus'),
+            strength_bonus=combat.get('strengthBonus'),
+            defense_bonus=combat.get('defenseBonus'),
+            magic_bonus=combat.get('magicBonus'),
+            range_bonus=combat.get('rangeBonus'),
+            speed=combat.get('speed'),
+            aggro_radius=combat.get('aggroRadius'),
+            is_always_aggro=combat.get('isAlwaysAggro'),
+            respawn_length=combat.get('respawnLength')
         )
 
 class NPCLoot(Base):
