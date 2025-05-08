@@ -9,7 +9,6 @@ dependencies = [
     "nicegui",
     "pydantic",
     "sqlalchemy",
-    "uvicorn"
+    "sqlmodel>=0.0.24",
+    "uvicorn",
 ]
-
-

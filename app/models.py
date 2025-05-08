@@ -1,20 +1,19 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship, Session
+from typing import Optional, List, Any
+from sqlmodel import SQLModel, Field, Relationship, Session
 
-Base = declarative_base()
+# Shared Models using SQLModel (combines Pydantic + SQLAlchemy)
 
-class ItemDef(Base):
-    __tablename__ = 'itemdefs'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    description = Column(String)
-    cost = Column(Integer)
-    is_name_plural = Column(Boolean)
-    is_stackable = Column(Boolean)
-    is_tradeable = Column(Boolean)
+class ItemDef(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    description: str = ""
+    cost: int = 0
+    is_name_plural: bool = False
+    is_stackable: bool = False
+    is_tradeable: bool = False
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d: dict) -> "ItemDef":
         return cls(
             id=d['_id'],
             name=d['name'],
@@ -22,22 +21,30 @@ class ItemDef(Base):
             cost=d.get('cost', 0),
             is_name_plural=d.get('isNamePlural', False),
             is_stackable=d.get('isStackable', False),
-            is_tradeable=d.get('isTradeable', False),
+            is_tradeable=d.get('isTradeable', False)
         )
 
-class PickpocketDef(Base):
-    __tablename__ = 'pickpocketdefs'
-    id = Column(Integer, primary_key=True)
-    desc = Column(String)
-    xp = Column(Integer)
-    base_probability = Column(String)
-    stun_ticks = Column(Integer)
-    stun_damage = Column(Integer)
-    stun_message = Column(String)
-    loot = relationship("PickpocketLoot", back_populates="parent")
+class PickpocketLoot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    pickpocket_id: Optional[int] = Field(default=None, foreign_key="pickpocketdef.id")
+    item_id: Optional[int] = Field(default=None, foreign_key="itemdef.id")
+    amount: int = 1
+    odds: str = "1"
+
+    parent: Optional["PickpocketDef"] = Relationship(back_populates="loot")
+
+class PickpocketDef(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    desc: str
+    xp: int = 0
+    base_probability: str = "0"
+    stun_ticks: int = 0
+    stun_damage: int = 0
+    stun_message: str = ""
+    loot: List[PickpocketLoot] = Relationship(back_populates="parent")
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d: dict) -> "PickpocketDef":
         return cls(
             id=d['_id'],
             desc=d['desc'],
@@ -61,53 +68,64 @@ class PickpocketDef(Base):
                     odds=str(drop.get('odds', 1))
                 ))
 
-class PickpocketLoot(Base):
-    __tablename__ = 'pickpocket_loot'
-    id = Column(Integer, primary_key=True)
-    pickpocket_id = Column(Integer, ForeignKey('pickpocketdefs.id'))
-    item_id = Column(Integer, ForeignKey('itemdefs.id'))
-    amount = Column(Integer)
-    odds = Column(String)
-    parent = relationship("PickpocketDef", back_populates="loot")
-    item = relationship("ItemDef")
+class NPCLootEntry(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    loot_id: Optional[int] = Field(default=None, foreign_key="npcloot.id")
+    item_id: Optional[int] = Field(default=None, foreign_key="itemdef.id")
+    amount: int = 1
+    odds: str = "1"
 
-class NPCEntityDef(Base):
-    __tablename__ = 'npcentitydefs'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    description = Column(String)
-    pickpocket_id = Column(Integer, ForeignKey('pickpocketdefs.id'))
-    loot_table_id = Column(Integer, ForeignKey('npcloot.id'))
+    parent: Optional["NPCLoot"] = Relationship(back_populates="loot")
 
-    pickpocket = relationship("PickpocketDef")
-    loot_table = relationship("NPCLoot")
-
-    # Optional combat stats
-    combat_level = Column(Integer)
-    hitpoints = Column(Integer)
-    accuracy = Column(Integer)
-    strength = Column(Integer)
-    defense = Column(Integer)
-    magic = Column(Integer)
-    range = Column(Integer)
-    accuracy_bonus = Column(Integer)
-    strength_bonus = Column(Integer)
-    defense_bonus = Column(Integer)
-    magic_bonus = Column(Integer)
-    range_bonus = Column(Integer)
-    speed = Column(Integer)
-    aggro_radius = Column(Integer)
-    is_always_aggro = Column(Boolean)
-    respawn_length = Column(Integer)
+class NPCLoot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    loot: List[NPCLootEntry] = Relationship(back_populates="parent")
 
     @classmethod
-    def from_dict(cls, d):
+    def from_file(cls, session: Session, data):
+        loot_data = data.get("rareLootTable") or data
+        loot_container = cls(id=loot_data['_id'])
+        session.merge(loot_container)
+        for entry in loot_data['loot']:
+            session.add(NPCLootEntry(
+                loot_id=loot_container.id,
+                item_id=entry['itemId'],
+                amount=entry.get('amount', 1),
+                odds=str(entry.get('odds', 1))
+            ))
+
+class NPCEntityDef(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    description: str = ""
+    pickpocket_id: Optional[int] = Field(default=None, foreign_key="pickpocketdef.id")
+    loot_table_id: Optional[int] = Field(default=None, foreign_key="npcloot.id")
+    # Optional combat stats
+    combat_level: Optional[int] = None
+    hitpoints: Optional[int] = None
+    accuracy: Optional[int] = None
+    strength: Optional[int] = None
+    defense: Optional[int] = None
+    magic: Optional[int] = None
+    range: Optional[int] = None
+    accuracy_bonus: Optional[int] = None
+    strength_bonus: Optional[int] = None
+    defense_bonus: Optional[int] = None
+    magic_bonus: Optional[int] = None
+    range_bonus: Optional[int] = None
+    speed: Optional[int] = None
+    aggro_radius: Optional[int] = None
+    is_always_aggro: bool = False
+    respawn_length: Optional[int] = None
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "NPCEntityDef":
         combat = d.get('combat') or {}
         return cls(
             id=d['_id'],
             name=d['name'],
             description=d.get('description', ''),
-            pickpocket_id=d.get('pickpocketId'),  # foreign key to pickpocketdefs
+            pickpocket_id=d.get('pickpocketId'),
             loot_table_id=combat.get('lootTableId'),
             combat_level=combat.get('level'),
             hitpoints=combat.get('hitpoints'),
@@ -123,35 +141,6 @@ class NPCEntityDef(Base):
             range_bonus=combat.get('rangeBonus'),
             speed=combat.get('speed'),
             aggro_radius=combat.get('aggroRadius'),
-            is_always_aggro=combat.get('isAlwaysAggro'),
+            is_always_aggro=bool(combat.get('isAlwaysAggro')),
             respawn_length=combat.get('respawnLength')
         )
-
-class NPCLoot(Base):
-    __tablename__ = 'npcloot'
-    id = Column(Integer, primary_key=True)
-    loot = relationship("NPCLootEntry", back_populates="parent")
-
-    @classmethod
-    def from_file(cls, session: Session, data):
-        loot_data = data.get("rareLootTable") or data
-        loot_container = cls(id=loot_data['_id'])
-        
-        session.merge(loot_container)
-        for entry in loot_data['loot']:
-            session.add(NPCLootEntry(
-                loot_id=loot_container.id,
-                item_id=entry['itemId'],
-                amount=entry.get('amount', 1),
-                odds=str(entry.get('odds', 1))
-            ))
-
-class NPCLootEntry(Base):
-    __tablename__ = 'npcloot_entry'
-    id = Column(Integer, primary_key=True)
-    loot_id = Column(Integer, ForeignKey('npcloot.id'))
-    item_id = Column(Integer, ForeignKey('itemdefs.id'))
-    amount = Column(Integer)
-    odds = Column(String)
-    parent = relationship("NPCLoot", back_populates="loot")
-    item = relationship("ItemDef")

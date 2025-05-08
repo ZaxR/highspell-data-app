@@ -1,8 +1,8 @@
 # load_data.py
 import json
 import os
-from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine
+from sqlmodel import Session, SQLModel
+from app.database import engine
 from app import models
 from asset_registry import ASSETS
 
@@ -33,7 +33,6 @@ def load_data(session: Session):
     session.commit()
 
 if __name__ == "__main__":
-    models.Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
-    load_data(session)
-    session.close()
+    SQLModel.metadata.create_all(bind=engine)
+    with Session(engine) as session:
+        load_data(session)
