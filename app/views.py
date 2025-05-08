@@ -47,7 +47,7 @@ def register_ui_pages():
                 'rangeBonus': npc.range_bonus,
                 'speed': npc.speed,
                 'aggroRadius': npc.aggro_radius,
-                'isAlwaysAggro': npc.is_always_aggro,
+                'isAlwaysAggro': bool(npc.is_always_aggro),
                 'respawnLength': npc.respawn_length,
                 'lootTableId': npc.loot_table_id
             })

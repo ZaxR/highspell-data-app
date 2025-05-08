@@ -76,10 +76,12 @@ class NPCLootEntry(SQLModel, table=True):
     odds: str = "1"
 
     parent: Optional["NPCLoot"] = Relationship(back_populates="loot")
+    item: Optional["ItemDef"] = Relationship()
 
 class NPCLoot(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     loot: List[NPCLootEntry] = Relationship(back_populates="parent")
+    npcs: List["NPCEntityDef"] = Relationship(back_populates="loot_table")
 
     @classmethod
     def from_file(cls, session: Session, data):
@@ -100,6 +102,7 @@ class NPCEntityDef(SQLModel, table=True):
     description: str = ""
     pickpocket_id: Optional[int] = Field(default=None, foreign_key="pickpocketdef.id")
     loot_table_id: Optional[int] = Field(default=None, foreign_key="npcloot.id")
+
     # Optional combat stats
     combat_level: Optional[int] = None
     hitpoints: Optional[int] = None
@@ -117,6 +120,8 @@ class NPCEntityDef(SQLModel, table=True):
     aggro_radius: Optional[int] = None
     is_always_aggro: bool = False
     respawn_length: Optional[int] = None
+
+    loot_table: Optional["NPCLoot"] = Relationship(back_populates="npcs")
 
     @classmethod
     def from_dict(cls, d: dict) -> "NPCEntityDef":
