@@ -86,8 +86,8 @@ class NPCLoot(SQLModel, table=True):
     @classmethod
     def from_file(cls, session: Session, data):
         loot_data = data.get("rareLootTable") or data
-        loot_container = cls(id=loot_data['_id'])
-        session.merge(loot_container)
+        loot_container = session.merge(cls(id=loot_data['_id']))
+        session.flush()
         for entry in loot_data['loot']:
             session.add(NPCLootEntry(
                 loot_id=loot_container.id,
