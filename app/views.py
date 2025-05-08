@@ -89,20 +89,13 @@ def register_ui_pages():
                 {"field": "isAlwaysAggro", "filter": "agSetColumnFilter"},
                 {"field": "respawnLength", "filter": "agNumberColumnFilter"},
                 {"field": "lootTableId", "filter": "agNumberColumnFilter"},
-                {"field": "drops", "cellRenderer": "HtmlRenderer"}
+                {
+                    "field": "drops",
+                    ":cellRenderer": "params => { const e = document.createElement('div'); e.innerHTML = params.value || '<em>No drops</em>'; return e; }"
+                }
             ],
             "rowData": rows,
             "domLayout": "autoHeight",
-            "components": {
-                # Registers a JavaScript renderer that safely injects HTML
-                "HtmlRenderer": """
-                    function(params) {
-                        const eDiv = document.createElement('div');
-                        eDiv.innerHTML = params.value || '';
-                        return eDiv;
-                    }
-                """
-            }
         }).classes("w-full")
 
         session.close()
